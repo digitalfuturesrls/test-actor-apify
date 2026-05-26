@@ -109,11 +109,7 @@ try {
   console.error(`[main] Scraper failed: ${errorMessage}`);
 
   // Fail the actor with error details
-  await Actor.fail({
-    error: errorMessage,
-    citta: cittaNorm,
-    quartiere: quartiereNorm,
-  });
+  await Actor.fail({ statusMessage: errorMessage });
 } finally {
   // Always close the browser cleanly
   await browser.close();
