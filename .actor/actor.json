@@ -2,12 +2,11 @@
     "$schema": "https://apify.com/schemas/v1/actor.ide.json",
     "actorSpecification": 1,
     "name": "my-actor",
-    "title": "Project Cheerio Crawler Typescript",
-    "description": "Crawlee and Cheerio project in typescript.",
+    "title": "Project Playwright Crawler Typescript",
+    "description": "Crawlee and Playwright project in typescript.",
     "version": "0.0",
-    "buildTag": "latest",
     "meta": {
-        "templateId": "ts-crawlee-cheerio",
+        "templateId": "ts-crawlee-playwright-chrome",
         "generatedBy": "<FILL-IN-MODEL>"
     },
     "input": "./input_schema.json",

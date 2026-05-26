@@ -1,6 +1,12 @@
-// Crawlee - web scraping and browser automation library (Read more at https://crawlee.dev)
-import { CheerioCrawler } from '@crawlee/cheerio';
-// Apify SDK - toolkit for building Apify Actors (Read more at https://docs.apify.com/sdk/js/)
+/**
+ * This template is a production ready boilerplate for developing with `PlaywrightCrawler`.
+ * Use this to bootstrap your projects using the most up-to-date code.
+ * If you're looking for examples or want to learn more, see README.
+ */
+
+// For more information, see https://crawlee.dev
+import { PlaywrightCrawler } from '@crawlee/playwright';
+// For more information, see https://docs.apify.com/sdk/js
 import { Actor } from 'apify';
 
 // this is ESM project, and as such, it requires you to specify extensions in your relative imports
@@ -18,7 +24,7 @@ interface Input {
     maxRequestsPerCrawl: number;
 }
 
-// The init() call configures the Actor to correctly work with the Apify-provided environment - mainly the storage infrastructure. It is necessary that every Actor performs an init() call.
+// Initialize the Apify SDK
 await Actor.init();
 
 // Structure of input is defined in input_schema.json
@@ -29,13 +35,20 @@ const { startUrls = ['https://apify.com'], maxRequestsPerCrawl = 100 } =
 // Disable it for short runs if you are sure your proxy configuration is correct
 const proxyConfiguration = await Actor.createProxyConfiguration({ checkAccess: true });
 
-const crawler = new CheerioCrawler({
+const crawler = new PlaywrightCrawler({
     proxyConfiguration,
     maxRequestsPerCrawl,
     requestHandler: router,
+    launchContext: {
+        launchOptions: {
+            args: [
+                '--disable-gpu', // Mitigates the "crashing GPU process" issue in Docker containers
+            ],
+        },
+    },
 });
 
 await crawler.run(startUrls);
 
-// Gracefully exit the Actor process. It's recommended to quit all Actors with an exit()
+// Exit successfully
 await Actor.exit();

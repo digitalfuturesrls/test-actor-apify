@@ -1,6 +1,6 @@
 {
     "$schema": "https://apify.com/schemas/v1/input.ide.json",
-    "title": "CheerioCrawler Template",
+    "title": "PlaywrightCrawler Template",
     "type": "object",
     "schemaVersion": 1,
     "properties": {
