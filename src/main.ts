@@ -53,19 +53,24 @@ mkdirSync(logDir, { recursive: true });
 console.log(`[main] Log directory: ${logDir}`);
 
 // Proxy configuration
-const proxyConfig = await Actor.createProxyConfiguration({
-  // Disable access check for faster startup (assume valid config)
-  checkAccess: false,
-});
+// TODO: re-enable proxy before deploying to Apify
+const USE_PROXY = false;
 
 let proxyUrl: string | undefined;
-if (proxyConfig) {
-  try {
-    proxyUrl = await proxyConfig.newUrl();
-    console.log(`[main] Using proxy: ${proxyUrl}`);
-  } catch {
-    console.warn('[main] Could not get proxy URL, proceeding without proxy');
+if (USE_PROXY) {
+  const proxyConfig = await Actor.createProxyConfiguration({
+    checkAccess: false,
+  });
+  if (proxyConfig) {
+    try {
+      proxyUrl = await proxyConfig.newUrl();
+      console.log(`[main] Using proxy: ${proxyUrl}`);
+    } catch {
+      console.warn('[main] Could not get proxy URL, proceeding without proxy');
+    }
   }
+} else {
+  console.log('[main] Proxy disabled — proceeding without proxy');
 }
 
 // Launch browser with proxy support
