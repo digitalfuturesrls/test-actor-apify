@@ -28,7 +28,7 @@ export async function takeScreenshot(page: Page, filePath: string): Promise<void
   const dir = path.dirname(filePath);
   fs.mkdirSync(dir, { recursive: true });
   try {
-    await page.screenshot({ path: filePath, fullPage: true });
+    await page.screenshot({ path: filePath, fullPage: true, timeout: 60000, animations: "disabled" });
   } catch (err) {
     console.warn(`[screenshot] Failed to take screenshot: ${err}`);
   }
@@ -57,7 +57,7 @@ export async function scrapeImmobiliare({
 
   try {
     // Navigate to the listing page
-    await page.goto(taskUrl, { waitUntil: 'networkidle' });
+    await page.goto(taskUrl,  { waitUntil: 'domcontentloaded', timeout: 60000 });
 
     // Initial wait to let content render
     await page.waitForTimeout(15000);

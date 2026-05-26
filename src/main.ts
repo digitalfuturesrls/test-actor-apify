@@ -91,6 +91,7 @@ try {
   // Call the step-by-step scraper
   await scrapeImmobiliare({ browser, citta: cittaNorm, quartiere: quartiereNorm, data });
 
+  console.log((`[main] Scraper Completed. Print data ${data}`))
   // Collect results from the shared dictionary
   const links = data[cittaNorm]?.[quartiereNorm] ?? [];
 
