@@ -1,54 +1,124 @@
 /**
- * This template is a production ready boilerplate for developing with `PlaywrightCrawler`.
- * Use this to bootstrap your projects using the most up-to-date code.
- * If you're looking for examples or want to learn more, see README.
+ * Apify Actor entry point for immobiliare.it scraping.
+ * 
+ * Reads `citta` (city) and `quartiere` (neighborhood) from input and extracts
+ * all listing URLs using a step-by-step Playwright approach with manual pagination.
+ * Results are pushed to the Apify Dataset.
+ * 
+ * Proxy support is enabled via Actor.createProxyConfiguration().
+ * Screenshots are saved to logs/{citta}/screenshots/ on errors.
  */
 
-// For more information, see https://crawlee.dev
-import { PlaywrightCrawler } from '@crawlee/playwright';
-// For more information, see https://docs.apify.com/sdk/js
 import { Actor } from 'apify';
-
-// this is ESM project, and as such, it requires you to specify extensions in your relative imports
-// read more about this here: https://nodejs.org/docs/latest-v18.x/api/esm.html#mandatory-file-extensions
-// note that we need to use `.js` even when inside TS files
-import { router } from './routes.js';
-
-interface Input {
-    startUrls: {
-        url: string;
-        method?: 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'TRACE' | 'OPTIONS' | 'CONNECT' | 'PATCH';
-        headers?: Record<string, string>;
-        userData: Record<string, unknown>;
-    }[];
-    maxRequestsPerCrawl: number;
-}
+import { chromium } from 'playwright';
+import { scrapeImmobiliare } from './immobiliare-scraper.js';
 
 // Initialize the Apify SDK
 await Actor.init();
 
-// Structure of input is defined in input_schema.json
-const { startUrls = ['https://apify.com'], maxRequestsPerCrawl = 100 } =
-    (await Actor.getInput<Input>()) ?? ({} as Input);
+interface Input {
+  citta: string;
+  quartiere: string;
+}
 
-// `checkAccess` flag ensures the proxy credentials are valid, but the check can take a few hundred milliseconds.
-// Disable it for short runs if you are sure your proxy configuration is correct
-const proxyConfiguration = await Actor.createProxyConfiguration({ checkAccess: true });
+// Read input
+const input = await Actor.getInput<Input>();
+if (!input) {
+  throw new Error('No input provided. Expected { citta: string, quartiere: string }');
+}
 
-const crawler = new PlaywrightCrawler({
-    proxyConfiguration,
-    maxRequestsPerCrawl,
-    requestHandler: router,
-    launchContext: {
-        launchOptions: {
-            args: [
-                '--disable-gpu', // Mitigates the "crashing GPU process" issue in Docker containers
-            ],
-        },
-    },
+const { citta, quartiere } = input;
+
+// Validate required fields
+if (!citta || typeof citta !== 'string' || citta.trim().length === 0) {
+  throw new Error('Input must contain a non-empty "citta" string (city name, lowercase, no accents).');
+}
+if (!quartiere || typeof quartiere !== 'string' || quartiere.trim().length === 0) {
+  throw new Error('Input must contain a non-empty "quartiere" string (neighborhood name).');
+}
+
+// Normalize: remove accents and convert to lowercase
+const normalize = (s: string): string =>
+  s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+
+const cittaNorm = normalize(citta.trim());
+const quartiereNorm = normalize(quartiere.trim());
+
+console.log(`[main] Starting scraping for ${cittaNorm}/${quartiereNorm}`);
+
+// Ensure log directory exists
+import { mkdirSync } from 'node:fs';
+const logDir = `logs/${cittaNorm}`;
+mkdirSync(logDir, { recursive: true });
+console.log(`[main] Log directory: ${logDir}`);
+
+// Proxy configuration
+const proxyConfig = await Actor.createProxyConfiguration({
+  // Disable access check for faster startup (assume valid config)
+  checkAccess: false,
 });
 
-await crawler.run(startUrls);
+let proxyUrl: string | undefined;
+if (proxyConfig) {
+  try {
+    proxyUrl = await proxyConfig.newUrl();
+    console.log(`[main] Using proxy: ${proxyUrl}`);
+  } catch {
+    console.warn('[main] Could not get proxy URL, proceeding without proxy');
+  }
+}
+
+// Launch browser with proxy support
+const launchOptions: Parameters<typeof chromium.launch>[0] = {
+  headless: true,
+  args: [
+    '--disable-gpu',                    // Mitigates GPU crashes in Docker
+    '--disable-blink-features=Automation', // Avoid bot detection
+  ],
+};
+
+if (proxyUrl) {
+  launchOptions.proxy = { server: proxyUrl };
+}
+
+console.log('[main] Launching Chromium browser...');
+const browser = await chromium.launch(launchOptions);
+
+// Shared data dictionary (populated by scraper)
+const data: Record<string, Record<string, string[]>> = {};
+
+try {
+  // Call the step-by-step scraper
+  await scrapeImmobiliare({ browser, citta: cittaNorm, quartiere: quartiereNorm, data });
+
+  // Collect results from the shared dictionary
+  const links = data[cittaNorm]?.[quartiereNorm] ?? [];
+
+  // Push final results to dataset
+  await Actor.pushData({
+    zona: cittaNorm,
+    quartiere: quartiereNorm,
+    links,
+    count: links.length,
+    scrapedAt: new Date().toISOString(),
+  });
+
+  console.log(`[main] Completed. Pushed ${links.length} URLs to dataset.`);
+} catch (err) {
+  const errorMessage = err instanceof Error ? err.message : String(err);
+  console.error(`[main] Scraper failed: ${errorMessage}`);
+
+  // Fail the actor with error details
+  await Actor.fail({
+    error: errorMessage,
+    citta: cittaNorm,
+    quartiere: quartiereNorm,
+  });
+} finally {
+  // Always close the browser cleanly
+  await browser.close();
+  console.log('[main] Browser closed.');
+}
 
 // Exit successfully
 await Actor.exit();
