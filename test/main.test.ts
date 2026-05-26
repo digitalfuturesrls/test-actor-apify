@@ -63,7 +63,7 @@ describe('takeScreenshot', () => {
     await takeScreenshot(page, filePath);
 
     expect(mockMkdirSync).toHaveBeenCalledWith('logs/roma/screenshots', { recursive: true });
-    expect(page.screenshot).toHaveBeenCalledWith({ path: filePath, fullPage: true });
+    expect(page.screenshot).toHaveBeenCalledWith({ path: filePath, fullPage: true, timeout: 60000, animations: "disabled" });
   });
 
   it('should not throw when screenshot fails', async () => {
