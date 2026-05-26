@@ -69,6 +69,11 @@ export async function scrapeImmobiliare({
       throw new Error('Captcha detected – stopping to avoid IP block');
     }
 
+    // --- Screenshot: page loaded successfully ---
+    const loadedPath = path.join(screenshotDir, 'page-loaded.png');
+    await takeScreenshot(page, loadedPath);
+    console.log(`[${citta}/${quartiere}] Screenshot pagina caricata salvata: ${loadedPath}`);
+
     // --- Extract result count ---
     let totalExpected: number | undefined;
     try {
