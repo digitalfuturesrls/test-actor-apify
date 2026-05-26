@@ -11,7 +11,7 @@ import path from 'node:path';
 /**
  * Check if the page contains a captcha indicator script.
  */
-async function checkCaptcha(page: Page): Promise<boolean> {
+export async function checkCaptcha(page: Page): Promise<boolean> {
   try {
     const content = await page.content();
     return content.includes('ct.captcha-delivery.com');
@@ -24,7 +24,7 @@ async function checkCaptcha(page: Page): Promise<boolean> {
  * Take a full-page screenshot and save to the specified path.
  * Creates directories as needed.
  */
-async function takeScreenshot(page: Page, filePath: string): Promise<void> {
+export async function takeScreenshot(page: Page, filePath: string): Promise<void> {
   const dir = path.dirname(filePath);
   fs.mkdirSync(dir, { recursive: true });
   try {
