@@ -48,16 +48,33 @@ const crawler = new PlaywrightCrawler({
 
     proxyConfiguration,
     maxRequestsPerCrawl,
-    requestHandler: router,
+    async requestHandler(context) {
+         const { page, request, ...rest } = context;
+
+
+        await page.context().addInitScript(() => {
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined,
+            });
+
+            Object.defineProperty(navigator, 'languages', {
+                get: () => ['it-IT', 'it'],
+            });
+
+            (window as any).chrome = { runtime: {} };
+        });
+
+        await page.goto(request.url, {
+            waitUntil: 'domcontentloaded',
+        });
+
+        await router(context);
+    },
+    
     useSessionPool: true,
     persistCookiesPerSession: true,
-    headless: true,
-    
-    preNavigationHooks: [
-        async ({ page: playwrightPage }) => {
-            await playwrightPage.addInitScript(stealthScript);
-        },
-    ],
+
+
     launchContext: {
         // userAgent will be applied automatically - no need for useChrome
         useChrome: true,
@@ -76,7 +93,6 @@ const crawler = new PlaywrightCrawler({
                 '--log-level=3', // Imposta il livello di log al minimo (solo errori fatali, 3 = FATAL). Perché serve: Lascia solo errori critici, riducendo output spazzatura.
                 '--disable-dev-shm-usage', //Evita l'uso di /dev/shm per la memoria condivisa. Perché serve: Su Linux in ambienti containerizzati (Docker), /dev/shm è spesso troppo piccolo (64MB). Disabilitandolo Chrome usa la memoria normale, prevenendo crash. Su Windows non ha effetto ma è portato per compatibilità.
                 '--disable-blink-features=AutomationControlled', //Disabilita la feature Blink AutomationControlled, che è ciò che fa sì che navigator.webdriver sia true. Perché serve: Questa è l'impostazione più importante per l'evasione. Normalmente Selenium imposta navigator.webdriver = true, e i siti usano questa proprietà per rilevare bot. Disabilitando la feature, navigator.webdriver diventa undefined o false, come in un browser normale.
-                '--headless=new', // La modalità headless nuova è molto più simile al browser normale: ha dimensioni finestra reali, supporta estensioni, e produce un fingerprint più simile a un browser headless reale (in passato HeadlessChrome era facilmente rilevabile).
             ],
         },
     },
