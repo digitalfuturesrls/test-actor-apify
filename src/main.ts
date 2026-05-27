@@ -59,7 +59,8 @@ const crawler = new PlaywrightCrawler({
     ],
     launchContext: {
         // userAgent will be applied automatically - no need for useChrome
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        useChrome: true,
         launchOptions: {
             viewport: { width: 1280, height: 800 },
             headless: true,
