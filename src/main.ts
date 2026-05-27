@@ -35,7 +35,13 @@ const { startUrls = [{ url: 'https://www.google.com' }], maxRequestsPerCrawl = 1
 
 // `checkAccess` flag ensures the proxy credentials are valid, but the check can take a few hundred milliseconds.
 // Disable it for short runs if you are sure your proxy configuration is correct
-const proxyConfiguration = await Actor.createProxyConfiguration({ checkAccess: true });
+const proxyConfiguration = await Actor.createProxyConfiguration({ 
+    groups: ['RESIDENTIAL'],
+    countryCode: 'IT',
+    checkAccess: true 
+});
+
+console.log(await proxyConfiguration?.newUrl());
 
 const crawler = new PlaywrightCrawler({
     proxyConfiguration,
