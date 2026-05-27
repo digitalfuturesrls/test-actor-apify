@@ -8,19 +8,22 @@
             "title": "Città",
             "type": "string",
             "description": "Città di riferimento da analizzare",
-            "default" : "bologna"
+            "default": "bologna",
+            "editor": "textfield"
         },
         "quartiere": {
             "title": "Quartiere",
             "type": "string",
             "description": "Quartiere della città da analizzare",
-            "default" : "bolognina"
+            "default": "bolognina",
+            "editor": "textfield"
         },
         "maxRequestsPerCrawl": {
             "title": "Max Requests per Crawl",
             "type": "integer",
             "description": "Maximum number of requests that can be made by this crawler.",
-            "default": 100
+            "default": 100,
+            "editor": "number"
         }
     }
 }
