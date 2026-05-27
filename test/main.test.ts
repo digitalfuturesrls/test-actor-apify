@@ -8,13 +8,22 @@ describe('PlaywrightCrawler', () => {
         await purgeDefaultStorages();
     });
 
-    it('should crawl and push data to dataset', async () => {
+    it('should crawl with warmup flow and push data to dataset', async () => {
         const crawler = new PlaywrightCrawler({
             maxRequestsPerCrawl: 10,
             requestHandler: router,
         });
 
-        await crawler.run(['https://apify.com']);
+        const warmupUrl = 'https://apify.com';
+        const targetUrl = 'https://apify.com/store';
+
+        await crawler.run([{
+            url: warmupUrl,
+            userData: {
+                role: 'warmup',
+                targetUrl,
+            },
+        }]);
 
         expect(crawler.stats.state.requestsFinished).toBeGreaterThan(0);
 

@@ -8,6 +8,7 @@
 import { PlaywrightCrawler } from '@crawlee/playwright';
 // For more information, see https://docs.apify.com/sdk/js
 import { Actor } from 'apify';
+import { log } from 'apify/log';
 
 // this is ESM project, and as such, it requires you to specify extensions in your relative imports
 // read more about this here: https://nodejs.org/docs/latest-v18.x/api/esm.html#mandatory-file-extensions
@@ -33,6 +34,25 @@ await Actor.init();
 const { startUrls = [{ url: 'https://www.google.com' }], maxRequestsPerCrawl = 100 } =
     (await Actor.getInput<Input>()) ?? ({} as Input);
 
+// Validate that exactly two URLs are provided: first for warmup, second as target
+if (!startUrls || startUrls.length < 2) {
+    log.error('startUrls must contain exactly two URLs: first for warmup, second as target');
+    throw new Error('startUrls must contain exactly two URLs: first for warmup, second as target');
+}
+
+const warmupUrl = startUrls[0].url;
+const targetUrl = startUrls[1].url;
+log.info(`Warmup URL: ${warmupUrl}`);
+log.info(`Target URL: ${targetUrl}`);
+
+const startRequest = {
+    url: warmupUrl,
+    userData: {
+        role: 'warmup',
+        targetUrl,
+    },
+};
+
 // `checkAccess` flag ensures the proxy credentials are valid, but the check can take a few hundred milliseconds.
 // Disable it for short runs if you are sure your proxy configuration is correct
 const proxyConfiguration = await Actor.createProxyConfiguration({
@@ -49,7 +69,7 @@ const crawler = new PlaywrightCrawler({
     maxRequestsPerCrawl,
 
     async requestHandler(context) {
-         const { page, request, ...rest } = context;
+        const { page, request, ...rest } = context;
 
 
         await page.context().addInitScript(() => {
@@ -92,8 +112,7 @@ const crawler = new PlaywrightCrawler({
     },
 });
 
-await crawler.run(startUrls);
-console.log(`Entrypoint  crawler :${JSON.stringify(startUrls)}`);
+await crawler.run([startRequest]);
 
 // Exit successfully
 await Actor.exit();
