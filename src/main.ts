@@ -13,6 +13,7 @@ import { Actor } from 'apify';
 // read more about this here: https://nodejs.org/docs/latest-v18.x/api/esm.html#mandatory-file-extensions
 // note that we need to use `.js` even when inside TS files
 import { router } from './routes.js';
+import { stealthScript } from './stealth.js';
 
 interface Input {
 
@@ -35,24 +36,30 @@ const { startUrls = [{ url: 'https://www.google.com' }], maxRequestsPerCrawl = 1
 
 // `checkAccess` flag ensures the proxy credentials are valid, but the check can take a few hundred milliseconds.
 // Disable it for short runs if you are sure your proxy configuration is correct
-const proxyConfiguration = await Actor.createProxyConfiguration({ 
+const proxyConfiguration = await Actor.createProxyConfiguration({
     groups: ['RESIDENTIAL'],
     countryCode: 'IT',
-    checkAccess: true 
+    checkAccess: true
 });
 
 console.log(await proxyConfiguration?.newUrl());
 
 const crawler = new PlaywrightCrawler({
+
     proxyConfiguration,
     maxRequestsPerCrawl,
     requestHandler: router,
     useSessionPool: true,
     persistCookiesPerSession: true,
-    headless : true,
+    headless: true,
+    preNavigationHooks: [
+        async ({ page: playwrightPage }) => {
+            await playwrightPage.addInitScript(stealthScript);
+        },
+    ],
     launchContext: {
-// userAgent will be applied automatically - no need for useChrome
-        userAgent : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0',
+        // userAgent will be applied automatically - no need for useChrome
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0',
         launchOptions: {
             viewport: { width: 1280, height: 800 },
             headless: true,
@@ -69,8 +76,6 @@ const crawler = new PlaywrightCrawler({
                 '--disable-dev-shm-usage', //Evita l'uso di /dev/shm per la memoria condivisa. Perché serve: Su Linux in ambienti containerizzati (Docker), /dev/shm è spesso troppo piccolo (64MB). Disabilitandolo Chrome usa la memoria normale, prevenendo crash. Su Windows non ha effetto ma è portato per compatibilità.
                 '--disable-blink-features=AutomationControlled', //Disabilita la feature Blink AutomationControlled, che è ciò che fa sì che navigator.webdriver sia true. Perché serve: Questa è l'impostazione più importante per l'evasione. Normalmente Selenium imposta navigator.webdriver = true, e i siti usano questa proprietà per rilevare bot. Disabilitando la feature, navigator.webdriver diventa undefined o false, come in un browser normale.
                 '--headless=new', // La modalità headless nuova è molto più simile al browser normale: ha dimensioni finestra reali, supporta estensioni, e produce un fingerprint più simile a un browser headless reale (in passato HeadlessChrome era facilmente rilevabile).
-
-
             ],
         },
     },
