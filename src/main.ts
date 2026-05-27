@@ -7,8 +7,8 @@
 // For more information, see https://crawlee.dev
 import { PlaywrightCrawler } from '@crawlee/playwright';
 // For more information, see https://docs.apify.com/sdk/js
-import { Actor } from 'apify';
-import { log } from 'apify/log';
+import { Actor, log } from 'apify';
+
 
 // this is ESM project, and as such, it requires you to specify extensions in your relative imports
 // read more about this here: https://nodejs.org/docs/latest-v18.x/api/esm.html#mandatory-file-extensions
