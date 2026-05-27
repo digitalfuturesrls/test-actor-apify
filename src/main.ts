@@ -41,11 +41,16 @@ const crawler = new PlaywrightCrawler({
     proxyConfiguration,
     maxRequestsPerCrawl,
     requestHandler: router,
+    useSessionPool: true,
+    persistCookiesPerSession:true,
     launchContext: {
+        useChrome: true,
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
         launchOptions: {
-            args: [
-                '--disable-gpu', // Mitigates the "crashing GPU process" issue in Docker containers
-            ],
+          headless: true,
+          args: [
+              '--disable-gpu', // Mitigates the "crashing GPU process" issue in Docker containers
+          ],
         },
     },
 });
