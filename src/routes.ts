@@ -36,7 +36,6 @@ router.addHandler('list', async ({ request, page, log, pushData }) => {
     log.info(`${title}`, { url: request.loadedUrl });
 
     //console.log(await page.textContent('body'));
-
     await pushData({
         url: request.loadedUrl,
         title,
