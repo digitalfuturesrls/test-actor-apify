@@ -42,12 +42,13 @@ const proxyConfiguration = await Actor.createProxyConfiguration({
     checkAccess: true
 });
 
-console.log(await proxyConfiguration?.newUrl());
+//console.log(await proxyConfiguration?.newUrl());
 
 const crawler = new PlaywrightCrawler({
 
     proxyConfiguration,
     maxRequestsPerCrawl,
+
     async requestHandler(context) {
          const { page, request, ...rest } = context;
 
@@ -64,17 +65,11 @@ const crawler = new PlaywrightCrawler({
             (window as any).chrome = { runtime: {} };
         });
 
-        await page.goto(request.url, {
-            waitUntil: 'domcontentloaded',
-        });
-
         await router(context);
     },
-    
+
     useSessionPool: true,
     persistCookiesPerSession: true,
-
-
     launchContext: {
         // userAgent will be applied automatically - no need for useChrome
         useChrome: true,
