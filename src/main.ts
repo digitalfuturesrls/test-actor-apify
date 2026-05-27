@@ -52,6 +52,7 @@ const crawler = new PlaywrightCrawler({
     useSessionPool: true,
     persistCookiesPerSession: true,
     headless: true,
+    
     preNavigationHooks: [
         async ({ page: playwrightPage }) => {
             await playwrightPage.addInitScript(stealthScript);
@@ -59,11 +60,10 @@ const crawler = new PlaywrightCrawler({
     ],
     launchContext: {
         // userAgent will be applied automatically - no need for useChrome
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         useChrome: true,
         launchOptions: {
             viewport: { width: 1280, height: 800 },
-            headless: true,
+            headless: false,
             args: [
                 '--disable-gpu', // Mitigates the "crashing GPU process" issue in Docker containers
                 '--disable-notifications', // Blocca tutte le richieste di notifica push dei siti. Perché serve: I popup di notifica interferirebbero con lo scraper coprendo elementi cliccabili.
