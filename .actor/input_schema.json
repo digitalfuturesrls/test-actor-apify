@@ -4,19 +4,16 @@
     "type": "object",
     "schemaVersion": 1,
     "properties": {
-        "citta": {
-            "title": "Città",
-            "type": "string",
-            "description": "Città di riferimento da analizzare",
-            "default": "bologna",
-            "editor": "textfield"
-        },
-        "quartiere": {
-            "title": "Quartiere",
-            "type": "string",
-            "description": "Quartiere della città da analizzare",
-            "default": "bolognina",
-            "editor": "textfield"
+        "startUrls": {
+            "title": "Start URLs",
+            "type": "array",
+            "description": "URLs to start with.",
+            "editor": "requestListSources",
+            "prefill": [
+                {
+                    "url": "https://apify.com"
+                }
+            ]
         },
         "maxRequestsPerCrawl": {
             "title": "Max Requests per Crawl",

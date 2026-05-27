@@ -16,16 +16,13 @@ import { router } from './routes.js';
 
 interface Input {
   
-  /*
     startUrls: {
         url: string;
         method?: 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'TRACE' | 'OPTIONS' | 'CONNECT' | 'PATCH';
         headers?: Record<string, string>;
         userData: Record<string, unknown>;
     }[];
-    */
-    citta:string;
-    quartiere: string;
+
     maxRequestsPerCrawl: number;
 }
 
@@ -33,7 +30,7 @@ interface Input {
 await Actor.init();
 
 // Structure of input is defined in input_schema.json
-const { citta = "bologna", quartiere = 'bolognina', maxRequestsPerCrawl = 100 } =
+const { startUrls = [{ url : 'https://www.google.com'}],  maxRequestsPerCrawl = 100 } =
     (await Actor.getInput<Input>()) ?? ({} as Input);
 
 // `checkAccess` flag ensures the proxy credentials are valid, but the check can take a few hundred milliseconds.
@@ -53,14 +50,17 @@ const crawler = new PlaywrightCrawler({
     },
 });
 
-const entrypoint = `https://www.immobiliare.it/vendita-case/${citta}/${quartiere}/?criterio=rilevanza&tipoProprieta=1&noAste=1`;
 await crawler.run([
   {
-    url : "https://www.google.com"
+    url : "https://www.google.com",
+    userData : {
+        label: 'list',
+        description: 'This is the homepage of Google',
+    }
   }
 ]);
 
-console.log(`Entrypoint  crawler : ${entrypoint}`);
+console.log(`Entrypoint  crawler : ${startUrls}`);
 
 // Exit successfully
 await Actor.exit();
