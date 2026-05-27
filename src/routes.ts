@@ -2,7 +2,31 @@ import { createPlaywrightRouter } from '@crawlee/playwright';
 
 export const router = createPlaywrightRouter();
 
-router.addDefaultHandler(async ({ request, page, enqueueLinks, log }) => {
+/**
+ * Shared logic for processing a listing page.
+ * Used by both the warmup default handler (after direct goto) and the 'list' handler.
+ */
+async function handleListPage(page: any, log: any, pushData: any, loadedUrl: string) {
+    // piccola attesa iniziale (simula lettura pagina)
+    await page.waitForTimeout(2000 + Math.random() * 2000);
+
+    // scroll leggero (simula utente che esplora)
+    await page.mouse.wheel(0, 800);
+    await page.waitForTimeout(1500 + Math.random() * 1500);
+
+    const title = await page.title();
+    log.info('Avviata analisi lista');
+    log.info(`${title}`, { url: loadedUrl });
+
+    await pushData({
+        url: loadedUrl,
+        title,
+    });
+
+    await page.waitForTimeout(1000 + Math.random() * 2000);
+}
+
+router.addDefaultHandler(async ({ request, page, log, pushData }) => {
     if (request.userData?.role === 'warmup') {
         const targetUrl = request.userData.targetUrl as string;
         log.info(`Warmup request detected, performing human-like interactions on: ${request.url}`);
@@ -21,14 +45,12 @@ router.addDefaultHandler(async ({ request, page, enqueueLinks, log }) => {
         await page.waitForTimeout(200 + Math.random() * 300);
         await page.mouse.move(400, 500);
 
-        // Enqueue the target URL with label 'list' (no goto — crawler will navigate to it via list handler)
-        log.info(`Enqueuing target URL with label 'list': ${targetUrl}`);
-        await enqueueLinks({
-            urls: [targetUrl],
-            label: 'list',
-        });
+        // Navigazione diretta al target URL e processazione della lista
+        log.info(`Navigating directly to target URL: ${targetUrl}`);
+        await page.goto(targetUrl, { waitUntil: 'networkidle' });
+        await handleListPage(page, log, pushData, targetUrl);
 
-        log.info('Warmup complete, target URL enqueued with label \'list\'');
+        log.info('Warmup + list processing complete');
         return;
     }
 
@@ -51,24 +73,5 @@ router.addHandler('detail', async ({ request, page, log, pushData }) => {
 
 
 router.addHandler('list', async ({ request, page, log, pushData }) => {
-
-
-    // piccola attesa iniziale (simula lettura pagina)
-    await page.waitForTimeout(2000 + Math.random() * 2000);
-
-    // scroll leggero (simula utente che esplora)
-    await page.mouse.wheel(0, 800);
-    await page.waitForTimeout(1500 + Math.random() * 1500);
-
-    const title = await page.title();
-    log.info("Avviata analisi lista");
-    log.info(`${title}`, { url: request.loadedUrl });
-
-    //console.log(await page.textContent('body'));
-    await pushData({
-        url: request.loadedUrl,
-        title,
-    });
-
-    await page.waitForTimeout(1000 + Math.random() * 2000);
+    await handleListPage(page, log, pushData, request.loadedUrl!);
 });
