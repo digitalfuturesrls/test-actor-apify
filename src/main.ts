@@ -50,17 +50,8 @@ const crawler = new PlaywrightCrawler({
     },
 });
 
-await crawler.run([
-  {
-    url : "https://www.google.com",
-    userData : {
-        label: 'list',
-        description: 'This is the homepage of Google',
-    }
-  }
-]);
-
-console.log(`Entrypoint  crawler : ${startUrls}`);
+await crawler.run(startUrls);
+console.log(`Entrypoint  crawler :${JSON.stringify(startUrls)}`);
 
 // Exit successfully
 await Actor.exit();
