@@ -15,12 +15,36 @@ async function handleListPage(page: any, log: any, pushData: any, loadedUrl: str
     await page.waitForTimeout(1500 + Math.random() * 1500);
 
     const title = await page.title();
+
+
     log.info('Avviata analisi lista');
     log.info(`${title}`, { url: loadedUrl });
+
+
+   // =========================
+    // 🔎 ESTRAZIONE HREF
+    // =========================
+    const hrefs = await page
+        .locator('xpath=//a[contains(@href, "/annunci")]')
+        .evaluateAll((elements: any[]) =>
+            elements
+                .map(el => el.getAttribute('href'))
+                .filter(Boolean)
+        );
+
+    // =========================
+    // 🌐 NORMALIZZAZIONE URL
+    // =========================
+    const urls = hrefs.map((href: string) =>
+        new URL(href, loadedUrl).toString()
+    );
+
+    log.info(`Trovati ${urls.length} annunci`);
 
     await pushData({
         url: loadedUrl,
         title,
+        results: urls,
     });
 
     await page.waitForTimeout(1000 + Math.random() * 2000);
