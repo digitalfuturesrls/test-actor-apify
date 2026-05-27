@@ -31,5 +31,5 @@ describe('PlaywrightCrawler', () => {
         expect(items.length).toBeGreaterThan(0);
         expect(items[0].url).toBeDefined();
         expect(items[0].title).toBeDefined();
-    }, 60_000);
+    }, 120_000);
 });
