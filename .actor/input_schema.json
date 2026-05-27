@@ -1,19 +1,20 @@
 {
     "$schema": "https://apify.com/schemas/v1/input.ide.json",
-    "title": "PlaywrightCrawler Template",
+    "title": "PlaywrightCrawler per immobiliare.it",
     "type": "object",
     "schemaVersion": 1,
     "properties": {
-        "startUrls": {
-            "title": "Start URLs",
-            "type": "array",
-            "description": "URLs to start with.",
-            "editor": "requestListSources",
-            "prefill": [
-                {
-                    "url": "https://apify.com"
-                }
-            ]
+        "citta": {
+            "title": "Città",
+            "type": "string",
+            "description": "Città di riferimento da analizzare",
+            "default" : "bologna"
+        },
+        "quartiere": {
+            "title": "Quartiere",
+            "type": "string",
+            "description": "Quartiere della città da analizzare",
+            "default" : "bolognina"
         },
         "maxRequestsPerCrawl": {
             "title": "Max Requests per Crawl",

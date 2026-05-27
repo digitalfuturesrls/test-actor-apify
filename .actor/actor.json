@@ -1,8 +1,8 @@
 {
     "$schema": "https://apify.com/schemas/v1/actor.ide.json",
     "actorSpecification": 1,
-    "name": "my-actor-1",
-    "title": "Project Playwright Crawler Typescript",
+    "name": "immox-actor-immobiliare",
+    "title": "Immobiliare Crawler Typescript",
     "description": "Crawlee and Playwright project in typescript.",
     "version": "0.0",
     "meta": {

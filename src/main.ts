@@ -15,12 +15,17 @@ import { Actor } from 'apify';
 import { router } from './routes.js';
 
 interface Input {
+  
+  /*
     startUrls: {
         url: string;
         method?: 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'TRACE' | 'OPTIONS' | 'CONNECT' | 'PATCH';
         headers?: Record<string, string>;
         userData: Record<string, unknown>;
     }[];
+    */
+    citta:string;
+    quartiere: string;
     maxRequestsPerCrawl: number;
 }
 
@@ -28,7 +33,7 @@ interface Input {
 await Actor.init();
 
 // Structure of input is defined in input_schema.json
-const { startUrls = ['https://apify.com'], maxRequestsPerCrawl = 100 } =
+const { citta = "bologna", quartiere = 'bolognina', maxRequestsPerCrawl = 100 } =
     (await Actor.getInput<Input>()) ?? ({} as Input);
 
 // `checkAccess` flag ensures the proxy credentials are valid, but the check can take a few hundred milliseconds.
@@ -48,7 +53,10 @@ const crawler = new PlaywrightCrawler({
     },
 });
 
-await crawler.run(startUrls);
+const entrypoint = `https://www.immobiliare.it/vendita-case/${citta}/${quartiere}}/?criterio=rilevanza&tipoProprieta=1&noAste=1`;
+await crawler.run("https://www.google.com");
+
+console.log(`Entrypoint  crawler : ${entrypoint}`);
 
 // Exit successfully
 await Actor.exit();
