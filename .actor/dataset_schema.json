@@ -1,53 +1,23 @@
 {
     "$schema": "https://apify.com/schemas/v1/dataset.ide.json",
     "actorSpecification": 1,
-    "fields": {
-        "zona": {
-            "type": "string",
-            "description": "Nome della città"
-        },
-        "quartiere": {
-            "type": "string",
-            "description": "Nome del quartiere"
-        },
-        "url": {
-            "type": "string",
-            "description": "URL completo dell'annuncio"
-        },
-        "conteggio_totale": {
-            "type": "integer",
-            "description": "Numero totale di link raccolti per questa combinazione"
-        }
-    },
+    "fields": {},
     "views": {
         "overview": {
             "title": "Overview",
             "transformation": {
-                "fields": [
-                    "zona",
-                    "quartiere",
-                    "url",
-                    "conteggio_totale"
-                ]
+                "fields": ["title", "url"]
             },
             "display": {
                 "component": "table",
                 "properties": {
-                    "zona": {
-                        "label": "Città",
-                        "format": "text"
-                    },
-                    "quartiere": {
-                        "label": "Quartiere",
+                    "title": {
+                        "label": "Title",
                         "format": "text"
                     },
                     "url": {
-                        "label": "URL Annuncio",
+                        "label": "URL",
                         "format": "link"
-                    },
-                    "conteggio_totale": {
-                        "label": "Totale Link",
-                        "format": "number"
                     }
                 }
             }
