@@ -2,7 +2,71 @@
   "version": 3,
   "projectName": "immox-actor",
   "createdAt": "2026-05-27T08:20:07.128Z",
-  "updatedAt": "2026-05-27T08:20:07.128Z",
+  "updatedAt": "2026-05-27T11:12:33.401Z",
   "lastHardenedAt": null,
-  "messages": []
+  "messages": [
+    {
+      "key": "project_identity",
+      "role": "system",
+      "content": "Apify Actor named 'Immobiliare Crawler Typescript' (actor.json name: immox-actor-immobiliare) built with Crawlee PlaywrightCrawler. Template: ts-crawlee-playwright-chrome. Target: scrape listings from immobiliare.it. ESM project, TypeScript 6.x, Node >=18 (CI uses Node 24).",
+      "category": "project_context",
+      "ttlDays": 30,
+      "updatedAt": "2026-05-27T11:12:33.401Z",
+      "source": "context_agent"
+    },
+    {
+      "key": "dependencies",
+      "role": "system",
+      "content": "Runtime: apify@^3.7, @crawlee/playwright@^3.15, playwright@1.60. Dev: typescript@^6, tsx@^4 (dev runner), vitest@^4 (testing), eslint@^9 + @apify/eslint-config@^2, prettier@^3, @types/node@^24. Docker base: apify/actor-node-playwright-chrome:24-1.60.0 with multi-stage build. postinstall: npx crawlee install-playwright-browsers.",
+      "category": "dependencies",
+      "ttlDays": 30,
+      "updatedAt": "2026-05-27T11:12:33.401Z",
+      "source": "context_agent"
+    },
+    {
+      "key": "code_rules",
+      "role": "system",
+      "content": "ESM with mandatory .js extensions in relative TS imports. 4-space indent, single quotes, printWidth 120 (per .prettierrc and .editorconfig). Use `import { log } from 'apify/log'` for all logging — never console.log (AGENTS.md mandate). Use `createPlaywrightRouter()` for routing. Payload via `pushData()`. Proxy via `Actor.createProxyConfiguration()`. No deprecated `additionalHttpHeaders` — use `preNavigationHooks` instead. Validate input schema in .actor/ and always persist state on abort via Actor.on('aborting').",
+      "category": "code_rules",
+      "ttlDays": 30,
+      "updatedAt": "2026-05-27T11:12:33.401Z",
+      "source": "context_agent"
+    },
+    {
+      "key": "file_map",
+      "role": "system",
+      "content": "src/main.ts — entrypoint: Actor.init(), reads input (startUrls, maxRequestsPerCrawl), creates proxy config (RESIDENTIAL, IT), instantiates PlaywrightCrawler with session pool + cookie persistence, runs router. src/routes.ts — createPlaywrightRouter with default handler (enqueue globs) + 'detail' handler (pushData title/url) + 'list' handler (scroll simulation + pushData). .actor/ — actor.json (name, title, Dockerfile path), input_schema.json (startUrls, maxRequestsPerCrawl), output_schema.json, dataset_schema.json (title+url table view). test/main.test.ts — Vitest integration test, purges storage, runs crawler on apify.com. Dockerfile — multi-stage build: builder stage with dev deps + tsc build, final stage with prod deps only, runs node dist/main.js.",
+      "category": "file_map",
+      "ttlDays": 30,
+      "updatedAt": "2026-05-27T11:12:33.401Z",
+      "source": "context_agent"
+    },
+    {
+      "key": "flow_logic",
+      "role": "system",
+      "content": "1) Actor.init() sets up Apify SDK. 2) Input parsed from .actor/input_schema.json: startUrls[] and maxRequestsPerCrawl (default 100). 3) Proxy config created with RESIDENTIAL group + IT country code with access check. 4) PlaywrightCrawler instantiated with proxy, session pool (useSessionPool:true), cookie persistence, headless Chrome with --disable-gpu. 5) crawler.run(startUrls) dispatches to router. 6) Default route enqueues URLs matching https://apify.com/* with label 'detail'. 7) 'detail' handler pushes {url, title} to dataset. 8) 'list' handler (exists but not linked via enqueue in main) scrolls, logs body text, pushes {url, title}. 9) Actor.exit() on completion. CI: GitHub Actions runs npm ci, installs chromium, builds, tests.",
+      "category": "flow_logic",
+      "ttlDays": 30,
+      "updatedAt": "2026-05-27T11:12:33.401Z",
+      "source": "context_agent"
+    },
+    {
+      "key": "scripts_and_commands",
+      "role": "system",
+      "content": "npm start / npm run start:dev → tsx src/main.ts (dev). npm run start:prod → node dist/main.js (prod container). npm run build → tsc. npm test → vitest run. npm run lint → eslint. npm run format → prettier --write .. Apify CLI: apify run (local), apify push (deploy to platform), apify pull (download existing Actor). CI: GitHub Actions .github/workflows/test.yaml runs on push to main/master and PRs.",
+      "category": "infrastructure",
+      "ttlDays": 30,
+      "updatedAt": "2026-05-27T11:12:33.401Z",
+      "source": "context_agent"
+    },
+    {
+      "key": "agent_reference",
+      "role": "system",
+      "content": "AGENTS.md (677 lines in root) is the authoritative developer guide for Apify Actors — contains platform conventions, logging rules (use apify/log, NOT console.log), graceful abort patterns, standby mode rules, project structure, input/output/dataset schema specs, README guidelines, and MCP tool setup. Agents should always consult AGENTS.md before making changes. .actor/actor.json meta.generatedBy should be filled with current tool+model.",
+      "category": "custom",
+      "ttlDays": 30,
+      "updatedAt": "2026-05-27T11:12:33.401Z",
+      "source": "context_agent"
+    }
+  ]
 }
