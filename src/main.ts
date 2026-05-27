@@ -15,7 +15,7 @@ import { Actor } from 'apify';
 import { router } from './routes.js';
 
 interface Input {
-  
+
     startUrls: {
         url: string;
         method?: 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'TRACE' | 'OPTIONS' | 'CONNECT' | 'PATCH';
@@ -30,7 +30,7 @@ interface Input {
 await Actor.init();
 
 // Structure of input is defined in input_schema.json
-const { startUrls = [{ url : 'https://www.google.com'}],  maxRequestsPerCrawl = 100 } =
+const { startUrls = [{ url: 'https://www.google.com' }], maxRequestsPerCrawl = 100 } =
     (await Actor.getInput<Input>()) ?? ({} as Input);
 
 // `checkAccess` flag ensures the proxy credentials are valid, but the check can take a few hundred milliseconds.
@@ -42,15 +42,14 @@ const crawler = new PlaywrightCrawler({
     maxRequestsPerCrawl,
     requestHandler: router,
     useSessionPool: true,
-    persistCookiesPerSession:true,
+    persistCookiesPerSession: true,
     launchContext: {
-        useChrome: true,
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        // userAgent will be applied automatically - no need for useChrome
         launchOptions: {
-          headless: true,
-          args: [
-              '--disable-gpu', // Mitigates the "crashing GPU process" issue in Docker containers
-          ],
+            headless: true,
+            args: [
+                '--disable-gpu', // Mitigates the "crashing GPU process" issue in Docker containers
+            ],
         },
     },
 });

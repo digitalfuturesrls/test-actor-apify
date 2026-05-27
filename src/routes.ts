@@ -22,6 +22,15 @@ router.addHandler('detail', async ({ request, page, log, pushData }) => {
 
 
 router.addHandler('list', async ({ request, page, log, pushData }) => {
+
+
+    // piccola attesa iniziale (simula lettura pagina)
+    await page.waitForTimeout(2000 + Math.random() * 2000);
+
+    // scroll leggero (simula utente che esplora)
+    await page.mouse.wheel(0, 800);
+    await page.waitForTimeout(1500 + Math.random() * 1500);
+
     const title = await page.title();
     log.info("Avviata analisi lista");
     log.info(`${title}`, { url: request.loadedUrl });
@@ -30,4 +39,6 @@ router.addHandler('list', async ({ request, page, log, pushData }) => {
         url: request.loadedUrl,
         title,
     });
+
+    await page.waitForTimeout(1000 + Math.random() * 2000);
 });
