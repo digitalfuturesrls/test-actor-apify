@@ -53,8 +53,12 @@ const crawler = new PlaywrightCrawler({
     },
 });
 
-const entrypoint = `https://www.immobiliare.it/vendita-case/${citta}/${quartiere}}/?criterio=rilevanza&tipoProprieta=1&noAste=1`;
-await crawler.run("https://www.google.com");
+const entrypoint = `https://www.immobiliare.it/vendita-case/${citta}/${quartiere}/?criterio=rilevanza&tipoProprieta=1&noAste=1`;
+await crawler.run([
+  {
+    url : "https://www.google.com"
+  }
+]);
 
 console.log(`Entrypoint  crawler : ${entrypoint}`);
 
