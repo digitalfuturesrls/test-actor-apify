@@ -12,6 +12,8 @@
 import { Actor } from 'apify';
 import { chromium } from 'playwright';
 import { scrapeImmobiliare } from './immobiliare-scraper.js';
+import fs from 'node:fs';
+import path from 'node:path';
 
 // Initialize the Apify SDK
 await Actor.init();
@@ -54,7 +56,7 @@ console.log(`[main] Log directory: ${logDir}`);
 
 // Proxy configuration
 // TODO: re-enable proxy before deploying to Apify
-const USE_PROXY = false;
+const USE_PROXY = true;
 
 let proxyUrl: string | undefined;
 if (USE_PROXY) {
@@ -93,6 +95,8 @@ const browser = await chromium.launch(launchOptions);
 const data: Record<string, Record<string, string[]>> = {};
 
 try {
+
+/*
   // Call the step-by-step scraper
   await scrapeImmobiliare({ browser, citta: cittaNorm, quartiere: quartiereNorm, data });
 
@@ -109,7 +113,40 @@ try {
     scrapedAt: new Date().toISOString(),
   });
 
+
   console.log(`[main] Completed. Pushed ${links.length} URLs to dataset.`);
+  */  
+  const taskUrl = `https://www.google.com`;
+
+  // Create a new page (browser already has proxy)
+  const page = await browser.newPage();
+  try {
+    // Navigate to the listing page
+    await page.goto(taskUrl,  { waitUntil: 'domcontentloaded', timeout: 60000 });
+
+    // Initial wait to let content render
+    await page.waitForTimeout(15000);
+
+
+    const screenshotDir = path.join('logs', citta, 'screenshots');
+    fs.mkdirSync(screenshotDir, { recursive: true });
+    console.log(`Dir saving screenshot : ${screenshotDir}`);
+
+
+    try {
+      await page.screenshot({ path: screenshotDir, fullPage: true, timeout: 60000, animations: "disabled" });
+    } catch (err) {
+      console.warn(`[screenshot] Failed to take screenshot: ${err}`);
+    }
+
+  }catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(`[Page-level] Scraper failed: ${errorMessage}`);
+
+  } finally {
+    await page.close();
+  }
+
 } catch (err) {
   const errorMessage = err instanceof Error ? err.message : String(err);
   console.error(`[main] Scraper failed: ${errorMessage}`);
