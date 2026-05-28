@@ -20,6 +20,8 @@ async function handleListPage(page: any, log: any, pushData: any, loadedUrl: str
     log.info('Avviata analisi lista');
     log.info(`${title}`, { url: loadedUrl });
 
+    const body = await page.textContent('body');
+    log.info(body ?? 'Body vuoto');
 
    // =========================
     // 🔎 ESTRAZIONE HREF
