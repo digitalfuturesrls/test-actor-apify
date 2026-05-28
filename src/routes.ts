@@ -25,7 +25,7 @@ async function handleListPage(page: any, log: any, pushData: any, loadedUrl: str
     // 🔎 ESTRAZIONE HREF
     // =========================
     const hrefs = await page
-        .locator('xpath=//a[contains(@href, "/annunci")]')
+        .locator('xpath=//a[@href]')
         .evaluateAll((elements: any[]) =>
             elements
                 .map(el => el.getAttribute('href'))
