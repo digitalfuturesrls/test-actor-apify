@@ -81,7 +81,7 @@ const crawler = new PlaywrightCrawler({
                 get: () => ['it-IT', 'it'],
             });
 
-            (window as any).chrome = { runtime: {} };
+            //(window as any).chrome = { runtime: {} };
         });
 
         await router(context);
@@ -99,12 +99,12 @@ const crawler = new PlaywrightCrawler({
                 '--disable-gpu', // Mitigates the "crashing GPU process" issue in Docker containers
                 '--disable-notifications', // Blocca tutte le richieste di notifica push dei siti. Perché serve: I popup di notifica interferirebbero con lo scraper coprendo elementi cliccabili.
                 '--disable-popup-blocking', // Permette l'apertura di popup. Perché serve: Alcuni siti aprono link in nuove finestre/popup. Bloccarli impedirebbe la navigazione.
-                '--remote-debugging-port=0', // Abilita il debugging remoto su una porta casuale. Perché serve: Necessario per il funzionamento di undetected_chromedriver (il driver si collega al browser via protocollo DevTools). =0 evita conflitti di porta.
+                //'--remote-debugging-port=0', // Abilita il debugging remoto su una porta casuale. Perché serve: Necessario per il funzionamento di undetected_chromedriver (il driver si collega al browser via protocollo DevTools). =0 evita conflitti di porta.
                 '--disable-save-password-bubble', // Disabilita il prompt "salva password?". Perché serve: Quel banner si sovrapporrebbe agli elementi della pagina rompendo i selettori XPath.
                 '--disable-translate', // Disabilita la barra di traduzione automatica. Perché serve: La barra di traduzione è un elemento DOM aggiuntivo che può interferire con i clic e i selettori.
-                '--disable-infobars', // Nasconde il banner "Chrome is being controlled by automated test software". Perché serve: Quel banner è un chiaro segnale ai siti che il browser è automatizzato. Nasconderlo aiuta a passare inosservati.
-                '--disable-logging', // Disabilita i log interni di Chrome. Perché serve: Riduce rumore su console e performance overhead.
-                '--log-level=3', // Imposta il livello di log al minimo (solo errori fatali, 3 = FATAL). Perché serve: Lascia solo errori critici, riducendo output spazzatura.
+                //'--disable-infobars', // Nasconde il banner "Chrome is being controlled by automated test software". Perché serve: Quel banner è un chiaro segnale ai siti che il browser è automatizzato. Nasconderlo aiuta a passare inosservati.
+                //'--disable-logging', // Disabilita i log interni di Chrome. Perché serve: Riduce rumore su console e performance overhead.
+                //'--log-level=3', // Imposta il livello di log al minimo (solo errori fatali, 3 = FATAL). Perché serve: Lascia solo errori critici, riducendo output spazzatura.
                 '--disable-dev-shm-usage', //Evita l'uso di /dev/shm per la memoria condivisa. Perché serve: Su Linux in ambienti containerizzati (Docker), /dev/shm è spesso troppo piccolo (64MB). Disabilitandolo Chrome usa la memoria normale, prevenendo crash. Su Windows non ha effetto ma è portato per compatibilità.
                 '--disable-blink-features=AutomationControlled', //Disabilita la feature Blink AutomationControlled, che è ciò che fa sì che navigator.webdriver sia true. Perché serve: Questa è l'impostazione più importante per l'evasione. Normalmente Selenium imposta navigator.webdriver = true, e i siti usano questa proprietà per rilevare bot. Disabilitando la feature, navigator.webdriver diventa undefined o false, come in un browser normale.
             ],
