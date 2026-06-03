@@ -68,21 +68,135 @@ const crawler = new PlaywrightCrawler({
     proxyConfiguration,
     maxRequestsPerCrawl,
 
+    preNavigationHooks: [
+        async ({ page }) => {
+            try {
+                // Imposta timezone, locale e geolocation sul contesto del browser
+                const context = page.context();
+                await context.setExtraHTTPHeaders({
+                    'Accept-Language': 'it-IT,it;q=0.9',
+                });
+
+                // Imposta geolocation per Roma
+                await context.setGeolocation({
+                    latitude: 41.9028,
+                    longitude: 12.4964,
+                });
+
+                // Concedi permessi di geolocalizzazione
+                await context.grantPermissions(['geolocation']);
+
+                // Override fingerprint prima della navigazione
+                await page.addInitScript(() => {
+                    // Timezone Europe/Rome spoofing via getTimezoneOffset override
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (Date.prototype as any).getTimezoneOffset = () => -120;
+
+                    // Override Intl.DateTimeFormat resolvedOptions for timezone
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const OrigDateTimeFormat = (Intl as any).DateTimeFormat;
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (Intl as any).DateTimeFormat = function (...args: unknown[]) {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const instance = new (OrigDateTimeFormat as any)(...(args as unknown[]));
+                        const origResolved = instance.resolvedOptions.bind(instance);
+                        instance.resolvedOptions = () => ({ ...origResolved(), timeZone: 'Europe/Rome' });
+                        return instance;
+                    };
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (Intl as any).DateTimeFormat.prototype = OrigDateTimeFormat.prototype;
+
+                    Object.defineProperty(navigator, 'webdriver', {
+                        get: () => undefined,
+                    });
+                    Object.defineProperty(navigator, 'languages', {
+                        get: () => ['it-IT', 'it', 'en-US', 'en'],
+                    });
+                    Object.defineProperty(navigator, 'plugins', {
+                        get: () => {
+                            // Proxy per simulare PluginArray con metodi item/namedItem/refresh
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            const plugins = new Proxy([
+                                {
+                                    name: 'Chrome PDF Plugin',
+                                    description: 'Portable Document Format',
+                                    filename: 'internal-pdf-viewer',
+                                },
+                                {
+                                    name: 'Chrome PDF Viewer',
+                                    description: '',
+                                    filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai',
+                                },
+                                {
+                                    name: 'Native Client',
+                                    description: '',
+                                    filename: 'internal-nacl-plugin',
+                                },
+                            ] as unknown as object, {
+                                get(target, prop) {
+                                    if (prop === 'item') return (index: number) => (target as Record<string, unknown>[])[index] ?? null;
+                                    if (prop === 'namedItem') return (name: string) => (target as Array<{ name: string }>).find((p) => p.name === name) ?? null;
+                                    if (prop === 'refresh') return () => { };
+                                    return (target as Record<string, unknown>)[prop as string];
+                                },
+                            });
+                            return plugins;
+                        },
+                        configurable: true,
+                    });
+                    Object.defineProperty(navigator, 'hardwareConcurrency', {
+                        get: () => 4,
+                        configurable: true,
+                    });
+                    // deviceMemory è disponibile solo in Chrome (64GB max)
+                    Object.defineProperty(navigator, 'deviceMemory', {
+                        get: () => 8,
+                        configurable: true,
+                    });
+                    // Desktop: zero touch points
+                    Object.defineProperty(navigator, 'maxTouchPoints', {
+                        get: () => 0,
+                        configurable: true,
+                    });
+                    // WebGL fingerprint: vendor e renderer realistici su canvas
+                    const applyWebGLOverride = () => {
+                        const canvas = document.createElement('canvas');
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const gl = (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')) as any as WebGLRenderingContext | null;
+                        if (!gl) return;
+                        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                        if (!debugInfo) return;
+                        const origGetParameter = gl.getParameter.bind(gl);
+                        gl.getParameter = (pname: number) => {
+                            if (pname === debugInfo.UNMASKED_VENDOR_WEBGL) {
+                                return 'Google Inc. (Intel)';
+                            }
+                            if (pname === debugInfo.UNMASKED_RENDERER_WEBGL) {
+                                return 'ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0)';
+                            }
+                            return origGetParameter(pname);
+                        };
+                    };
+                    applyWebGLOverride();
+                    // window.chrome object simulato per evitare rilevamento
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    if (!(window as any).chrome) {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        (window as any).chrome = {
+                            runtime: {},
+                            loadTimes: () => ({}),
+                            csi: () => ({}),
+                        };
+                    }
+                });
+            } catch (e) {
+                log.warning('Init script failed', { error: e });
+            }
+        },
+    ],
+
     async requestHandler(context) {
         const { page, request, ...rest } = context;
-
-
-        await page.context().addInitScript(() => {
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => undefined,
-            });
-
-            Object.defineProperty(navigator, 'languages', {
-                get: () => ['it-IT', 'it'],
-            });
-
-            //(window as any).chrome = { runtime: {} };
-        });
 
         await router(context);
     },
@@ -93,20 +207,12 @@ const crawler = new PlaywrightCrawler({
         // userAgent will be applied automatically - no need for useChrome
         useChrome: true,
         launchOptions: {
-            viewport: { width: 1280, height: 800 },
+            viewport: { width: 1920, height: 1080 },
             headless: false,
             args: [
                 '--disable-gpu', // Mitigates the "crashing GPU process" issue in Docker containers
-                '--disable-notifications', // Blocca tutte le richieste di notifica push dei siti. Perché serve: I popup di notifica interferirebbero con lo scraper coprendo elementi cliccabili.
-                '--disable-popup-blocking', // Permette l'apertura di popup. Perché serve: Alcuni siti aprono link in nuove finestre/popup. Bloccarli impedirebbe la navigazione.
-                //'--remote-debugging-port=0', // Abilita il debugging remoto su una porta casuale. Perché serve: Necessario per il funzionamento di undetected_chromedriver (il driver si collega al browser via protocollo DevTools). =0 evita conflitti di porta.
-                '--disable-save-password-bubble', // Disabilita il prompt "salva password?". Perché serve: Quel banner si sovrapporrebbe agli elementi della pagina rompendo i selettori XPath.
-                '--disable-translate', // Disabilita la barra di traduzione automatica. Perché serve: La barra di traduzione è un elemento DOM aggiuntivo che può interferire con i clic e i selettori.
-                //'--disable-infobars', // Nasconde il banner "Chrome is being controlled by automated test software". Perché serve: Quel banner è un chiaro segnale ai siti che il browser è automatizzato. Nasconderlo aiuta a passare inosservati.
-                //'--disable-logging', // Disabilita i log interni di Chrome. Perché serve: Riduce rumore su console e performance overhead.
-                //'--log-level=3', // Imposta il livello di log al minimo (solo errori fatali, 3 = FATAL). Perché serve: Lascia solo errori critici, riducendo output spazzatura.
-                '--disable-dev-shm-usage', //Evita l'uso di /dev/shm per la memoria condivisa. Perché serve: Su Linux in ambienti containerizzati (Docker), /dev/shm è spesso troppo piccolo (64MB). Disabilitandolo Chrome usa la memoria normale, prevenendo crash. Su Windows non ha effetto ma è portato per compatibilità.
-                '--disable-blink-features=AutomationControlled', //Disabilita la feature Blink AutomationControlled, che è ciò che fa sì che navigator.webdriver sia true. Perché serve: Questa è l'impostazione più importante per l'evasione. Normalmente Selenium imposta navigator.webdriver = true, e i siti usano questa proprietà per rilevare bot. Disabilitando la feature, navigator.webdriver diventa undefined o false, come in un browser normale.
+                '--disable-dev-shm-usage', // Avoids /dev/shm memory issues in Linux containers (no effect on Windows)
+                '--disable-blink-features=AutomationControlled', // Hides navigator.webdriver to avoid bot detection
             ],
         },
     },
