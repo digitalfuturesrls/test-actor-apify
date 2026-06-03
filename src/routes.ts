@@ -3,56 +3,6 @@ import { createPlaywrightRouter } from '@crawlee/playwright';
 export const router = createPlaywrightRouter();
 
 /**
- * Shared logic for processing a listing page.
- * Used by both the warmup default handler (after direct goto) and the 'list' handler.
- */
-async function handleListPage(page: any, log: any, pushData: any, loadedUrl: string) {
-    // piccola attesa iniziale (simula lettura pagina)
-    await page.waitForTimeout(2000 + Math.random() * 2000);
-
-    // scroll leggero (simula utente che esplora)
-    await page.mouse.wheel(0, 800);
-    await page.waitForTimeout(1500 + Math.random() * 1500);
-
-    const title = await page.title();
-
-
-    log.info('Avviata analisi lista');
-    log.info(`${title}`, { url: loadedUrl });
-
-    const body = await page.textContent('body');
-    log.info(body ?? 'Body vuoto');
-
-    // =========================
-    // 🔎 ESTRAZIONE HREF
-    // =========================
-    const hrefs = await page
-        .locator("xpath=//a[contains(@href, 'annunci')]")
-        .evaluateAll((elements: any[]) =>
-            elements
-                .map(el => el.getAttribute('href'))
-                .filter(Boolean)
-        );
-
-    // =========================
-    // 🌐 NORMALIZZAZIONE URL
-    // =========================
-    const urls = hrefs.map((href: string) =>
-        new URL(href, loadedUrl).toString()
-    );
-
-    log.info(`Trovati ${urls.length} annunci`);
-
-    await pushData({
-        url: loadedUrl,
-        title,
-        results: urls,
-    });
-
-    await page.waitForTimeout(1000 + Math.random() * 2000);
-}
-
-/**
  * Simulates human-like scroll and mouse movements on a page.
  */
 async function performHumanInteractions(page: any): Promise<void> {
@@ -143,7 +93,7 @@ async function visitIntermediatePages(
     }
 }
 
-router.addDefaultHandler(async ({ request, page, log, pushData }) => {
+router.addDefaultHandler(async ({ request, page, log, enqueueLinks }) => {
     if (request.userData?.role === 'warmup') {
         const targetUrl = request.userData.targetUrl as string;
         log.info(`Warmup request detected, performing human-like interactions on: ${request.url}`);
@@ -168,22 +118,19 @@ router.addDefaultHandler(async ({ request, page, log, pushData }) => {
         // Visit intermediate pages of the target domain
         await visitIntermediatePages(page, targetUrl, log);
 
-        // Navigate to the actual target URL
-        log.info(`Navigating to target URL: ${targetUrl}`);
-        await page.goto(targetUrl, { waitUntil: 'networkidle' });
+        // Enqueue the target URL with label 'list' for proper routing
+        log.info(`Enqueueing target URL: ${targetUrl}`);
+        try {
+            await enqueueLinks({ urls: [targetUrl], label: 'list' });
+        } catch (err) {
+            log.warning(`Failed to enqueue target URL: ${targetUrl} - ${err}`);
+        }
 
-        // Process the list page
-        await handleListPage(page, log, pushData, targetUrl);
-
-        log.info('Warmup + list processing complete');
+        log.info('Warmup complete, target URL enqueued');
         return;
     }
 
-    log.info('enqueueing new URLs');
-    /*await enqueueLinks({
-        globs: ['https://apify.com/*'],
-        label: 'detail',
-    });*/
+    log.warning(`Unexpected default request: ${request.url}`);
 });
 
 router.addHandler('detail', async ({ request, page, log, pushData }) => {
@@ -198,5 +145,48 @@ router.addHandler('detail', async ({ request, page, log, pushData }) => {
 
 
 router.addHandler('list', async ({ request, page, log, pushData }) => {
-    await handleListPage(page, log, pushData, request.loadedUrl!);
+    const loadedUrl = request.loadedUrl!;
+
+    // piccola attesa iniziale (simula lettura pagina)
+    await page.waitForTimeout(2000 + Math.random() * 2000);
+
+    // scroll leggero (simula utente che esplora)
+    await page.mouse.wheel(0, 800);
+    await page.waitForTimeout(1500 + Math.random() * 1500);
+
+    const title = await page.title();
+
+    log.info('Avviata analisi lista');
+    log.info(`${title}`, { url: loadedUrl });
+
+    const body = await page.textContent('body');
+    log.info(body ?? 'Body vuoto');
+
+    // =========================
+    // 🔎 ESTRAZIONE HREF
+    // =========================
+    const hrefs = await page
+        .locator("xpath=//a[contains(@href, 'annunci')]")
+        .evaluateAll((elements: any[]) =>
+            elements
+                .map(el => el.getAttribute('href'))
+                .filter(Boolean)
+        );
+
+    // =========================
+    // 🌐 NORMALIZZAZIONE URL
+    // =========================
+    const urls = hrefs.map((href: string) =>
+        new URL(href, loadedUrl).toString()
+    );
+
+    log.info(`Trovati ${urls.length} annunci`);
+
+    await pushData({
+        url: loadedUrl,
+        title,
+        results: urls,
+    });
+
+    await page.waitForTimeout(1000 + Math.random() * 2000);
 });
