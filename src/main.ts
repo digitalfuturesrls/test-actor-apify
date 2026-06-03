@@ -67,6 +67,8 @@ const crawler = new PlaywrightCrawler({
 
     proxyConfiguration,
     maxRequestsPerCrawl,
+    maxRequestRetries: 3, // Retry on DataDome blocks — new session each retry
+    requestHandlerTimeoutSecs: 180, // Extended timeout for DataDome challenge resolution
 
     preNavigationHooks: [
         async ({ page }) => {
@@ -213,6 +215,7 @@ const crawler = new PlaywrightCrawler({
                 '--disable-gpu', // Mitigates the "crashing GPU process" issue in Docker containers
                 '--disable-dev-shm-usage', // Avoids /dev/shm memory issues in Linux containers (no effect on Windows)
                 '--disable-blink-features=AutomationControlled', // Hides navigator.webdriver to avoid bot detection
+                '--disable-features=site-per-process', // Helps avoid iframe-based bot detection
             ],
         },
     },

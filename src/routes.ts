@@ -1,6 +1,80 @@
 import { createPlaywrightRouter } from '@crawlee/playwright';
+import type { Page } from 'playwright';
 
 export const router = createPlaywrightRouter();
+
+// ─── DataDome helpers ───────────────────────────────────────────────
+
+/**
+ * Detects if the current page is a DataDome challenge (captcha-delivery.com).
+ * Returns true if the page URL or body contains DataDome indicators.
+ */
+async function isDataDomeChallenge(page: Page): Promise<boolean> {
+    const url = page.url();
+    if (url.includes('captcha-delivery.com') || url.includes('datadome')) {
+        return true;
+    }
+    // Check for DataDome script injection in page body
+    try {
+        const bodyText = await page.evaluate(() => document.body?.innerText?.slice(0, 2000) ?? '');
+        if (bodyText.includes('var dd=') || bodyText.includes('captcha-delivery.com')) {
+            return true;
+        }
+    } catch {
+        // Page might not be ready yet
+    }
+    return false;
+}
+
+/**
+ * Waits for DataDome challenge to resolve.
+ * Strategy:
+ *  - If headful mode: wait for the CAPTCHA iframe and let the user solve it (for debugging)
+ *  - In any case: poll for the datadome cookie or URL change
+ *
+ * @returns true if the challenge was resolved (cookie set / navigated away), false if still blocked
+ */
+async function waitForDataDomeResolution(page: Page, log: { info: (msg: string) => void; warning: (msg: string) => void }, timeoutMs = 90_000): Promise<boolean> {
+    const start = Date.now();
+
+    log.info('🔒 DataDome challenge detected — waiting for resolution...');
+
+    while (Date.now() - start < timeoutMs) {
+        // Check if we navigated away from captcha-delivery
+        const currentUrl = page.url();
+        if (!currentUrl.includes('captcha-delivery.com')) {
+            // Check if we got a datadome cookie
+            const cookies = await page.context().cookies();
+            const ddCookie = cookies.find(c => c.name === 'datadome');
+            if (ddCookie) {
+                log.info(`✅ DataDome passed! Cookie datadome = ${ddCookie.value.slice(0, 20)}...`);
+                return true;
+            }
+            // Might have navigated to the real page
+            if (currentUrl.includes('immobiliare.it')) {
+                log.info('✅ DataDome resolved — back on immobiliare.it');
+                return true;
+            }
+        }
+
+        // If there's a CAPTCHA iframe, log it (user may need to solve in headful mode)
+        const captchaFrame = page.frameLocator('iframe[src*="captcha-delivery"], iframe[title*="captcha"], iframe[title*="DataDome"]');
+        try {
+            const captchaVisible = await captchaFrame.locator('body').first().isVisible({ timeout: 1000 });
+            if (captchaVisible) {
+                log.warning('🧩 DataDome CAPTCHA iframe is visible — waiting for manual solve or auto-pass...');
+            }
+        } catch {
+            // No captcha iframe found — that's fine
+        }
+
+        // Poll every 2 seconds
+        await page.waitForTimeout(2000);
+    }
+
+    log.warning('⏰ DataDome resolution timed out');
+    return false;
+}
 
 /**
  * Simulates human-like scroll and mouse movements on a page.
@@ -101,6 +175,17 @@ router.addDefaultHandler(async ({ request, page, log, pushData }) => {
         // Load the warmup page
         await page.goto(request.url, { waitUntil: 'networkidle', timeout: 30000 });
 
+        // ─── DataDome check #1: after warmup page load ───────────
+        if (await isDataDomeChallenge(page)) {
+            const resolved = await waitForDataDomeResolution(page, log);
+            if (!resolved) {
+                log.warning('❌ DataDome blocked on warmup page — aborting');
+                return;
+            }
+            // Reload the page now that we have the datadome cookie
+            await page.goto(request.url, { waitUntil: 'networkidle', timeout: 30000 });
+        }
+
         // Wait a bit after page load (simulates reading/loading)
         await page.waitForTimeout(2000 + Math.random() * 2000);
 
@@ -118,6 +203,15 @@ router.addDefaultHandler(async ({ request, page, log, pushData }) => {
         // Visit intermediate pages of the target domain
         await visitIntermediatePages(page, targetUrl, log);
 
+        // ─── DataDome check #2: after intermediate page ──────────
+        if (await isDataDomeChallenge(page)) {
+            const resolved = await waitForDataDomeResolution(page, log);
+            if (!resolved) {
+                log.warning('❌ DataDome blocked on intermediate page — aborting');
+                return;
+            }
+        }
+
         // Navigate directly to target URL (reuse warmup session — avoids anti-bot detection)
         log.info(`Navigating to target URL: ${targetUrl}`);
         try {
@@ -125,6 +219,17 @@ router.addDefaultHandler(async ({ request, page, log, pushData }) => {
         } catch (err) {
             log.warning(`Failed to navigate to target URL: ${targetUrl} - ${err}`);
             return;
+        }
+
+        // ─── DataDome check #3: after target page load ───────────
+        if (await isDataDomeChallenge(page)) {
+            const resolved = await waitForDataDomeResolution(page, log, 120_000);
+            if (!resolved) {
+                log.warning('❌ DataDome blocked on target page — aborting');
+                return;
+            }
+            // Reload target after resolution
+            await page.goto(targetUrl, { waitUntil: 'networkidle', timeout: 30000 });
         }
 
         log.info('Warmup complete, processing target page inline');
