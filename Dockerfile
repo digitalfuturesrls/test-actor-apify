@@ -24,6 +24,12 @@ COPY --chown=myuser:myuser . ./
 # Don't audit to speed up the installation.
 RUN npm run build
 
+# Download patchright's stealth Chromium binary.
+# The postinstall script only installs Playwright browsers (for @crawlee/playwright),
+# not patchright's own patched Chromium. Without this, the COPY at line 58 would
+# fail because node_modules/patchright/chromium would not exist in the builder stage.
+RUN npx patchright install chromium --with-deps
+
 # Create final image
 FROM apify/actor-node-playwright-chrome:24-1.60.0
 
