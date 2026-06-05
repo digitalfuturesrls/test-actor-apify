@@ -28,7 +28,9 @@ RUN npm run build
 # The postinstall script only installs Playwright browsers (for @crawlee/playwright),
 # not patchright's own patched Chromium. Without this, the COPY at line 58 would
 # fail because node_modules/patchright/chromium would not exist in the builder stage.
-RUN npx patchright install chromium --with-deps
+# Omit --with-deps: the base image apify/actor-node-playwright-chrome already ships
+# all required system libs (libnss3, libatk-bridge, etc.) for Chromium.
+RUN npx patchright install chromium
 
 # Create final image
 FROM apify/actor-node-playwright-chrome:24-1.60.0
