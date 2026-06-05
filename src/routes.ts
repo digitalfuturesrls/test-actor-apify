@@ -1,4 +1,5 @@
 import { createPlaywrightRouter } from '@crawlee/playwright';
+import { humanizeMouseMove, humanizeScroll } from './stealth.js';
 
 export const router = createPlaywrightRouter();
 
@@ -7,12 +8,18 @@ export const router = createPlaywrightRouter();
  * Used by both the warmup default handler (after direct goto) and the 'list' handler.
  */
 async function handleListPage(page: any, log: any, pushData: any, loadedUrl: string) {
-    // piccola attesa iniziale (simula lettura pagina)
-    await page.waitForTimeout(2000 + Math.random() * 2000);
+    // Human-like initial delay (simulates reading the page)
+    await page.waitForTimeout(1500 + Math.random() * 2000);
 
-    // scroll leggero (simula utente che esplora)
-    await page.mouse.wheel(0, 800);
-    await page.waitForTimeout(1500 + Math.random() * 1500);
+    // Human-like scroll with Bézier curve motion
+    const viewportSize = page.viewportSize() ?? { width: 1920, height: 1080 };
+    await humanizeMouseMove(
+        page,
+        { x: viewportSize.width / 2, y: viewportSize.height - 100 },
+        { x: viewportSize.width / 2, y: 100 },
+        20
+    );
+    await humanizeScroll(page, 800, 1800);
 
     const title = await page.title();
 
@@ -23,7 +30,7 @@ async function handleListPage(page: any, log: any, pushData: any, loadedUrl: str
     const body = await page.textContent('body');
     log.info(body ?? 'Body vuoto');
 
-   // =========================
+    // =========================
     // 🔎 ESTRAZIONE HREF
     // =========================
     const hrefs = await page
@@ -60,16 +67,12 @@ router.addDefaultHandler(async ({ request, page, log, pushData }) => {
         // Simulate human-like behavior on warmup page
         await page.waitForTimeout(2000 + Math.random() * 2000);
 
-        // Scroll down slowly in steps
-        for (let i = 0; i < 3; i++) {
-            await page.mouse.wheel(0, 300);
-            await page.waitForTimeout(500 + Math.random() * 500);
-        }
+        // Human-like scroll simulation with variable speed
+        await humanizeScroll(page, 900, 2500);
+        await page.waitForTimeout(300 + Math.random() * 200);
 
-        // Random mouse movements
-        await page.mouse.move(100, 200);
-        await page.waitForTimeout(200 + Math.random() * 300);
-        await page.mouse.move(400, 500);
+        // Human-like mouse movement simulation
+        await humanizeMouseMove(page, { x: 100, y: 200 }, { x: 400, y: 500 }, 25);
 
         // Navigazione diretta al target URL e processazione della lista
         log.info(`Navigating directly to target URL: ${targetUrl}`);

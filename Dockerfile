@@ -4,13 +4,13 @@
 FROM apify/actor-node-playwright-chrome:24-1.60.0 AS builder
 
 # Check preinstalled packages
-RUN npm ls @crawlee/core apify puppeteer playwright
+RUN npm ls @crawlee/core apify puppeteer playwright patchright
 
 # Copy just package.json and package-lock.json
 # to speed up the build using Docker layer cache.
 COPY --chown=myuser:myuser package*.json Dockerfile ./
 
-# Check Playwright version is the same as the one from base image.
+# Check patchright version is compatible with pre-installed Playwright browsers.
 RUN node check-playwright-version.mjs
 
 # Install all dependencies. Don't audit to speed up the installation.
@@ -49,6 +49,13 @@ RUN npm --quiet set progress=false \
 
 # Copy built JS files from builder image
 COPY --from=builder --chown=myuser:myuser /home/myuser/dist ./dist
+
+# Copy patchright Chromium binary from builder to avoid runtime download.
+# patchright uses its own patched Chromium binary (different from vanilla Playwright's)
+# to apply stealth modifications. The binary is at node_modules/patchright/chromium
+# in the builder stage. We copy it here so the final image can use it via
+# getPatchrightExecutable() in src/main.ts.
+COPY --from=builder --chown=myuser:myuser /home/myuser/node_modules/patchright/chromium ./node_modules/patchright/chromium
 
 # Next, copy the remaining files and directories with the source code.
 # Since we do this after NPM install, quick build will be really fast

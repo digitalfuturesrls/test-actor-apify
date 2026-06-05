@@ -21,6 +21,12 @@
             "description": "Maximum number of requests that can be made by this crawler.",
             "default": 100,
             "editor": "number"
+        },
+        "stealthEnabled": {
+            "title": "Enable stealth mode",
+            "type": "boolean",
+            "description": "If enabled, use patchright browser engine with advanced fingerprint rotation and human simulation (default: true).",
+            "default": true
         }
     }
 }

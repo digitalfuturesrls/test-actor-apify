@@ -8,6 +8,16 @@
 import { PlaywrightCrawler } from '@crawlee/playwright';
 // For more information, see https://docs.apify.com/sdk/js
 import { Actor, log } from 'apify';
+import path from 'path';
+import fs from 'fs';
+
+// Stealth module with fingerprint rotation and anti-detection
+import {
+    createStealthLaunchOptions,
+    createNavigationHooks,
+    getRandomProfile,
+    randomizeFingerprint,
+} from './stealth.js';
 
 
 // this is ESM project, and as such, it requires you to specify extensions in your relative imports
@@ -63,26 +73,41 @@ const proxyConfiguration = await Actor.createProxyConfiguration({
 
 //console.log(await proxyConfiguration?.newUrl());
 
+// Detect patchright Chromium binary path
+function getPatchrightExecutable(): string | undefined {
+    const candidates = [
+        path.resolve(process.cwd(), 'node_modules', 'patchright', 'chromium'),
+        path.resolve(__dirname, '..', 'node_modules', 'patchright', 'chromium'),
+    ];
+
+    for (const candidate of candidates) {
+        try {
+            fs.accessSync(candidate, fs.constants.X_OK);
+            log.info(`Using patchright browser at: ${candidate}`);
+            return candidate;
+        } catch {
+            // Binary not found at this path, try next
+        }
+    }
+
+    log.warning('Patchright browser binary not found; falling back to default Playwright Chromium');
+    return undefined;
+}
+
+const patchrightExecutable = getPatchrightExecutable();
+
+// Generate session-specific fingerprint profile
+const fingerprint = getRandomProfile();
+const stealthLaunchOptions = createStealthLaunchOptions({ forceProfile: fingerprint });
+
 const crawler = new PlaywrightCrawler({
 
     proxyConfiguration,
     maxRequestsPerCrawl,
 
     async requestHandler(context) {
-        const { page, request, ...rest } = context;
-
-
-        await page.context().addInitScript(() => {
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => undefined,
-            });
-
-            Object.defineProperty(navigator, 'languages', {
-                get: () => ['it-IT', 'it'],
-            });
-
-            //(window as any).chrome = { runtime: {} };
-        });
+        // Apply fingerprint randomization for this session
+        await randomizeFingerprint(context.page, fingerprint);
 
         await router(context);
     },
@@ -90,26 +115,24 @@ const crawler = new PlaywrightCrawler({
     useSessionPool: true,
     persistCookiesPerSession: true,
     launchContext: {
-        // userAgent will be applied automatically - no need for useChrome
         useChrome: true,
         launchOptions: {
-            viewport: { width: 1280, height: 800 },
-            headless: false,
-            args: [
-                '--disable-gpu', // Mitigates the "crashing GPU process" issue in Docker containers
-                '--disable-notifications', // Blocca tutte le richieste di notifica push dei siti. Perché serve: I popup di notifica interferirebbero con lo scraper coprendo elementi cliccabili.
-                '--disable-popup-blocking', // Permette l'apertura di popup. Perché serve: Alcuni siti aprono link in nuove finestre/popup. Bloccarli impedirebbe la navigazione.
-                //'--remote-debugging-port=0', // Abilita il debugging remoto su una porta casuale. Perché serve: Necessario per il funzionamento di undetected_chromedriver (il driver si collega al browser via protocollo DevTools). =0 evita conflitti di porta.
-                '--disable-save-password-bubble', // Disabilita il prompt "salva password?". Perché serve: Quel banner si sovrapporrebbe agli elementi della pagina rompendo i selettori XPath.
-                '--disable-translate', // Disabilita la barra di traduzione automatica. Perché serve: La barra di traduzione è un elemento DOM aggiuntivo che può interferire con i clic e i selettori.
-                //'--disable-infobars', // Nasconde il banner "Chrome is being controlled by automated test software". Perché serve: Quel banner è un chiaro segnale ai siti che il browser è automatizzato. Nasconderlo aiuta a passare inosservati.
-                //'--disable-logging', // Disabilita i log interni di Chrome. Perché serve: Riduce rumore su console e performance overhead.
-                //'--log-level=3', // Imposta il livello di log al minimo (solo errori fatali, 3 = FATAL). Perché serve: Lascia solo errori critici, riducendo output spazzatura.
-                '--disable-dev-shm-usage', //Evita l'uso di /dev/shm per la memoria condivisa. Perché serve: Su Linux in ambienti containerizzati (Docker), /dev/shm è spesso troppo piccolo (64MB). Disabilitandolo Chrome usa la memoria normale, prevenendo crash. Su Windows non ha effetto ma è portato per compatibilità.
-                '--disable-blink-features=AutomationControlled', //Disabilita la feature Blink AutomationControlled, che è ciò che fa sì che navigator.webdriver sia true. Perché serve: Questa è l'impostazione più importante per l'evasione. Normalmente Selenium imposta navigator.webdriver = true, e i siti usano questa proprietà per rilevare bot. Disabilitando la feature, navigator.webdriver diventa undefined o false, come in un browser normale.
-            ],
+            ...stealthLaunchOptions,
+            executablePath: patchrightExecutable,
         },
     },
+    preNavigationHooks: createNavigationHooks(),
+    postNavigationHooks: [
+        async ({ page }) => {
+            // Verify webdriver is hidden after navigation
+            const isHidden = await page.evaluate(() => {
+                return Object.getOwnPropertyDescriptor(navigator, 'webdriver')?.get?.() === undefined;
+            });
+            if (!isHidden) {
+                log.warning('navigator.webdriver may not be properly hidden');
+            }
+        },
+    ],
 });
 
 await crawler.run([startRequest]);
