@@ -30,7 +30,12 @@ RUN npm run build
 # fail because node_modules/patchright/chromium would not exist in the builder stage.
 # Omit --with-deps: the base image apify/actor-node-playwright-chrome already ships
 # all required system libs (libnss3, libatk-bridge, etc.) for Chromium.
-RUN npx patchright install chromium
+
+USER root
+
+RUN npx patchright install chromium --with-deps
+
+USER myuser
 
 # Create final image
 FROM apify/actor-node-playwright-chrome:24-1.60.0
