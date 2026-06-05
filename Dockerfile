@@ -60,19 +60,16 @@ RUN npm --quiet set progress=false \
     && npm --version \
     && rm -r ~/.npm
 
+# Scarica il browser modificato di Patchright direttamente nello stadio finale.
+# Viene salvato nella cache di sistema corretta senza bisogno di COPY manuali.
+RUN npx patchright install chromium
+
 # Copy built JS files from builder image
 COPY --from=builder --chown=myuser:myuser /home/myuser/dist ./dist
 
-# Copy patchright Chromium binary from builder to avoid runtime download.
-# patchright uses its own patched Chromium binary (different from vanilla Playwright's)
-# to apply stealth modifications. The binary is at node_modules/patchright/chromium
-# in the builder stage. We copy it here so the final image can use it via
-# getPatchrightExecutable() in src/main.ts.
-COPY --from=builder --chown=myuser:myuser /home/myuser/node_modules/patchright/chromium ./node_modules/patchright/chromium
-
 # Next, copy the remaining files and directories with the source code.
-# Since we do this after NPM install, quick build will be really fast
-# for most source file changes.
+# Poiché node_modules/patchright/chromium non viene più toccato, 
+# non c'è rischio di sovrascrivere o perdere i binari del browser.
 COPY --chown=myuser:myuser . ./
 
 # Run the image.
