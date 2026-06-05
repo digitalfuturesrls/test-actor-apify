@@ -60,9 +60,14 @@ RUN npm --quiet set progress=false \
     && npm --version \
     && rm -r ~/.npm
 
+USER root
+
 # Scarica il browser modificato di Patchright direttamente nello stadio finale.
 # Viene salvato nella cache di sistema corretta senza bisogno di COPY manuali.
 RUN npx patchright install chromium
+
+
+USER myuser
 
 # Copy built JS files from builder image
 COPY --from=builder --chown=myuser:myuser /home/myuser/dist ./dist
