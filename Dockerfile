@@ -33,7 +33,7 @@ RUN npm run build
 
 USER root
 
-RUN npx patchright install chromium --with-deps
+RUN npx patchright install chromium 
 
 USER myuser
 
